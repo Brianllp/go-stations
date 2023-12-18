@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/TechBowl-japan/go-stations/model"
 )
@@ -26,7 +27,42 @@ func (s *TODOService) CreateTODO(ctx context.Context, subject, description strin
 		confirm = `SELECT subject, description, created_at, updated_at FROM todos WHERE id = ?`
 	)
 
-	return nil, nil
+	// ref: https://qiita.com/__m/items/b0cc9a4818297f5becd6
+	stmt, err := s.db.PrepareContext(ctx, insert)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := stmt.ExecContext(ctx, subject, description)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		createdAt time.Time
+		updatedAt time.Time
+	)
+
+	// ref: https://zenn.dev/chillout2san/articles/34aa952747880c#crud%E5%87%A6%E7%90%86%E3%81%AEread%E5%87%A6%E7%90%86%E3%82%92%E3%81%97%E3%81%9F%E3%81%84%E5%A0%B4%E5%90%88(%E4%B8%80%E3%81%A4%E3%81%AE%E3%83%AC%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92%E8%BF%94%E3%81%99)
+	row := s.db.QueryRowContext(ctx, confirm, id)
+	if err := row.Scan(&subject, &description, &createdAt, &updatedAt); err != nil {
+		return nil, err
+	}
+
+	todo := &model.TODO{
+		ID:          id,
+		Subject:     subject,
+		Description: description,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
+	}
+
+	return todo, nil
 }
 
 // ReadTODO reads TODOs on DB.
