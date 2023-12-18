@@ -55,13 +55,6 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// println("aaaaaaaaaaaaaaaaaaaaaaaaaaa")
-		// fmt.Printf("%T\n", todo)
-		// fmt.Printf("%v\n", todo)
-		// fmt.Printf("%#+v\n", todo)
-		// fmt.Printf("%#v\n", todo)
-		// println("aaaaaaaaaaaaaaaaaaaaaaaaaaa")
-
 		err = json.NewEncoder(w).Encode(todo)
 		if err != nil {
 			log.Println(err)
@@ -78,12 +71,7 @@ func (h *TODOHandler) Create(ctx context.Context, req *model.CreateTODORequest) 
 		log.Println(err)
 		return nil, fmt.Errorf("failed to create TODO: %w", err)
 	}
-	println("aaaaaaaaaaaaaaaaaaaaaaaaaaa")
-	fmt.Printf("%T\n", todo)
-	fmt.Printf("%v\n", todo)
-	fmt.Printf("%#+v\n", todo)
-	fmt.Printf("%#v\n", todo)
-	println("aaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
 	return &model.CreateTODOResponse{TODO: *todo}, nil
 }
 
