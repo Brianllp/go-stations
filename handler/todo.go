@@ -62,6 +62,49 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	if r.Method == http.MethodPut {
+		defer r.Body.Close()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		var request model.UpdateTODORequest
+		err = json.Unmarshal(body, &request)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// validation
+		if request.Subject == "" || request.ID == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		todo, err := h.Update(
+			r.Context(),
+			&request,
+		)
+		if err != nil {
+			if err.Error() == "not found" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(todo)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
 }
 
 // Create handles the endpoint that creates the TODO.
@@ -83,8 +126,16 @@ func (h *TODOHandler) Read(ctx context.Context, req *model.ReadTODORequest) (*mo
 
 // Update handles the endpoint that updates the TODO.
 func (h *TODOHandler) Update(ctx context.Context, req *model.UpdateTODORequest) (*model.UpdateTODOResponse, error) {
-	_, _ = h.svc.UpdateTODO(ctx, 0, "", "")
-	return &model.UpdateTODOResponse{}, nil
+	todo, err := h.svc.UpdateTODO(ctx, req.ID, req.Subject, req.Description)
+	if err != nil {
+		if err.Error() == "not found" {
+			return nil, err
+		}
+
+		log.Println(err)
+		return nil, fmt.Errorf("failed to update TODO: %w", err)
+	}
+	return &model.UpdateTODOResponse{TODO: *todo}, nil
 }
 
 // Delete handles the endpoint that deletes the TODOs.
